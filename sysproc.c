@@ -7,6 +7,8 @@
 #include "mmu.h"
 #include "proc.h"
 
+extern int syscalls_cnt[22];
+
 int
 sys_fork(void)
 {
@@ -88,4 +90,17 @@ sys_uptime(void)
   xticks = ticks;
   release(&tickslock);
   return xticks;
+}
+
+// return number of all systems calls taken place
+int 
+sys_cntsys(void)
+{
+  int cnt = 0;
+  for (int i = 1; i < NELEM(syscalls_cnt); ++i)
+  {
+    cnt += syscalls_cnt[i];
+  }
+
+  return cnt;
 }
