@@ -6,6 +6,7 @@
 #include "proc.h"
 #include "x86.h"
 #include "syscall.h"
+#include "readcount.h"
 
 // User code makes a system call with INT T_SYSCALL.
 // System call number in %eax.
@@ -103,7 +104,7 @@ extern int sys_unlink(void);
 extern int sys_wait(void);
 extern int sys_write(void);
 extern int sys_uptime(void);
-extern int sys_cntsys(void);
+extern int sys_getreadcount(void);
 
 static int (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
@@ -127,44 +128,26 @@ static int (*syscalls[])(void) = {
 [SYS_link]    sys_link,
 [SYS_mkdir]   sys_mkdir,
 [SYS_close]   sys_close,
-[SYS_cntsys]  sys_cntsys,
+[SYS_getreadcount]  sys_getreadcount,
 };
 
-int syscalls_cnt[] = {
-[SYS_fork]    0,
-[SYS_wait]    0,
-[SYS_exit]    0,
-[SYS_pipe]    0,
-[SYS_read]    0,
-[SYS_kill]    0,
-[SYS_exec]    0,
-[SYS_fstat]   0,
-[SYS_chdir]   0,
-[SYS_dup]     0,
-[SYS_getpid]  0,
-[SYS_sbrk]    0,
-[SYS_sleep]   0,
-[SYS_uptime]  0,
-[SYS_open]    0,
-[SYS_write]   0,
-[SYS_mknod]   0,
-[SYS_unlink]  0,
-[SYS_link]    0,
-[SYS_mkdir]   0,
-[SYS_close]   0,
-[SYS_cntsys]  0,
-};
+readcount_t greadcount;
 
 void
 syscall(void)
 {
+  init_readcount(&greadcount);
+
   int num;
   struct proc *curproc = myproc();
 
   num = curproc->tf->eax;
   if(num > 0 && num < NELEM(syscalls) && syscalls[num]) {
+    if (num == SYS_read) {
+      increment_readcount(&greadcount);
+    }
+
     curproc->tf->eax = syscalls[num]();
-    syscalls_cnt[num]++;
   } else {
     cprintf("%d %s: unknown sys call %d\n",
             curproc->pid, curproc->name, num);

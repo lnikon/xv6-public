@@ -6,8 +6,10 @@
 #include "memlayout.h"
 #include "mmu.h"
 #include "proc.h"
+#include "syscall.h"
+#include "readcount.h"
 
-extern int syscalls_cnt[22];
+extern readcount_t greadcount;
 
 int
 sys_fork(void)
@@ -26,6 +28,7 @@ int
 sys_wait(void)
 {
   return wait();
+
 }
 
 int
@@ -94,13 +97,13 @@ sys_uptime(void)
 
 // return number of all systems calls taken place
 int 
-sys_cntsys(void)
+sys_getreadcount(void)
 {
-  int cnt = 0;
-  for (int i = 1; i < NELEM(syscalls_cnt); ++i)
-  {
-    cnt += syscalls_cnt[i];
-  }
+  int lreadcount = 0;
 
-  return cnt;
+  acquire(&greadcount.lock);
+  lreadcount = greadcount.count;
+  release(&greadcount.lock);
+  
+  return lreadcount;
 }
